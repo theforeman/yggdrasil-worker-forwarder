@@ -11,7 +11,7 @@ import (
 
 	"git.sr.ht/~spc/go-log"
 	"github.com/pelletier/go-toml"
-	pb "github.com/redhatinsights/yggdrasil/protocol"
+	pb "github.com/redhatinsights/yggdrasil_v0/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
