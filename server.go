@@ -8,7 +8,7 @@ import (
 	"net/http"
 
 	"git.sr.ht/~spc/go-log"
-	pb "github.com/redhatinsights/yggdrasil/protocol"
+	pb "github.com/redhatinsights/yggdrasil_v0/protocol"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
