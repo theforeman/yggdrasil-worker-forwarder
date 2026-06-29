@@ -21,14 +21,14 @@ jobs:
           tagRegex: "v(.*)"  # Optional. Returns specified group text as tag name. Full tag string is returned if regex is not defined.
           tagRegexGroup: 1 # Optional. Default is 1.
       - name: Checkout the repository
-        uses: actions/checkout@v2
+        uses: actions/checkout@v7
       # - uses: actions/setup-go@v3
       #   with:
       #     go-version: '^1.17.0' # The Go version to download (if necessary) and use.
       # - run: |
       #     go vet .
       - name: Generate build files
-        uses: adamruzicka/go-cross-build@1.19-alpine3.18
+        uses: adamruzicka/go-cross-build@1.25-alpine3.23
         with:
             platforms: 'linux/amd64'
             package: '.'
