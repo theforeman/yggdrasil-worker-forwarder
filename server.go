@@ -37,11 +37,15 @@ func (s *forwarderServer) Send(ctx context.Context, d *pb.Data) (*pb.Receipt, er
 		log.Tracef("received data: %#v", d)
 
 		// Dial the Dispatcher and call "Finish"
-		conn, err := grpc.Dial(yggdDispatchSocketAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+		conn, err := grpc.NewClient(yggdDispatchSocketAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		if err != nil {
 			log.Fatal(err)
 		}
-		defer conn.Close()
+		defer func() {
+			if err := conn.Close(); err != nil {
+				log.Errorf("failed to close connection: %v", err)
+			}
+		}()
 
 		dataJson := jsonData(d)
 		log.Infof("sending %v", dataJson)
@@ -56,7 +60,11 @@ func (s *forwarderServer) Send(ctx context.Context, d *pb.Data) (*pb.Receipt, er
 		if error != nil {
 			log.Fatal(error)
 		}
-		defer response.Body.Close()
+		defer func() {
+			if err := response.Body.Close(); err != nil {
+				log.Errorf("failed to close response body: %v", err)
+			}
+		}()
 
 		log.Tracef("response Status: %v", response.Status)
 		log.Tracef("response Headers: %+v", response.Header)

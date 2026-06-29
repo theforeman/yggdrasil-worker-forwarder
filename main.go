@@ -31,10 +31,14 @@ func main() {
 
 		for _, value := range config.GetArray("env").([]string) {
 			split := strings.Split(value, "=")
-			os.Setenv(split[0], split[1])
+			if err := os.Setenv(split[0], split[1]); err != nil {
+				log.Fatal(fmt.Errorf("cannot set env var %s: %w", split[0], err))
+			}
 		}
 
-		os.Setenv("FORWARDER_HANDLER", strings.TrimSuffix(filepath.Base(configFile), filepath.Ext(configFile)))
+		if err := os.Setenv("FORWARDER_HANDLER", strings.TrimSuffix(filepath.Base(configFile), filepath.Ext(configFile))); err != nil {
+			log.Fatal(fmt.Errorf("cannot set FORWARDER_HANDLER: %w", err))
+		}
 	} else {
 		log.Debug("CONFIG_FILE not set")
 	}
@@ -66,11 +70,15 @@ func main() {
 	}
 
 	// Dial the dispatcher on its well-known address.
-	conn, err := grpc.Dial(yggdDispatchSocketAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(yggdDispatchSocketAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close()
+	defer func() {
+		if err := conn.Close(); err != nil {
+			log.Errorf("failed to close connection: %v", err)
+		}
+	}()
 
 	// Create a dispatcher client
 	c := pb.NewDispatcherClient(conn)
