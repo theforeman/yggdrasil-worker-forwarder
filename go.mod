@@ -1,6 +1,6 @@
 module github.com/shimshtein/yggdrasil-worker-forwarder
 
-go 1.25
+go 1.25.0
 
 require (
 	git.sr.ht/~spc/go-log v0.0.0-20210611184941-ce2f05edb627
