@@ -1,7 +1,7 @@
 PKGNAME := yggdrasil-worker-forwarder
 
 ifeq ($(origin VERSION), undefined)
-	VERSION := 0.0.3
+	VERSION := 0.0.4
 endif
 
 .PHONY: build
