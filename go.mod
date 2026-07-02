@@ -1,4 +1,4 @@
-module github.com/shimshtein/yggdrasil-worker-forwarder
+module github.com/theforeman/yggdrasil-worker-forwarder
 
 go 1.25.0
 
