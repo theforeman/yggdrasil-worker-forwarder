@@ -19,9 +19,10 @@ import (
 // "Finish" method.
 type forwarderServer struct {
 	pb.UnimplementedWorkerServer
-	Url      string
-	Username string
-	Password string
+	Url        string
+	Username   string
+	Password   string
+	HTTPClient *http.Client
 }
 
 type httpMessage struct {
@@ -56,8 +57,7 @@ func (s *forwarderServer) Send(ctx context.Context, d *pb.Data) (*pb.Receipt, er
 		request.Header.Set("Content-Type", "application/json")
 		request.SetBasicAuth(s.Username, s.Password)
 
-		client := &http.Client{}
-		response, error := client.Do(request)
+		response, error := s.HTTPClient.Do(request)
 		if error != nil {
 			log.Errorf("failed to send HTTP POST to %s: %v", s.Url, error)
 			return
