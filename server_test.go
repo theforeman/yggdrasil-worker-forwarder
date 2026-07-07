@@ -12,6 +12,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"context"
 	"testing"
 	"time"
 
@@ -105,7 +106,7 @@ func TestForwarderServer_Send_UsesHTTPClient(t *testing.T) {
 		Directive: "foreman_rh_cloud",
 	}
 
-	receipt, err := server.Send(nil, data)
+	receipt, err := server.Send(context.TODO(), data)
 	if err != nil {
 		t.Fatalf("Send returned error: %v", err)
 	}
