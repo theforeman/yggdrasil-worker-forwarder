@@ -31,7 +31,9 @@ func TestDispatch(t *testing.T) {
 
 func TestBuildHTTPClient_NoCAFile(t *testing.T) {
 	t.Setenv("FORWARDER_CA_FILE", "")
-	os.Unsetenv("FORWARDER_CA_FILE")
+	if err := os.Unsetenv("FORWARDER_CA_FILE"); err != nil {
+		t.Fatalf("failed to unset env: %v", err)
+	}
 	client := buildHTTPClient()
 	if client == nil {
 		t.Fatal("expected non-nil client")
@@ -56,7 +58,11 @@ func TestBuildHTTPClient_WithCAFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("request to TLS server failed: %v", err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("failed to close response body: %v", err)
+		}
+	}()
 
 	if resp.StatusCode != http.StatusOK {
 		t.Fatalf("expected 200, got %d", resp.StatusCode)
