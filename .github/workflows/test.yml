@@ -27,8 +27,8 @@ jobs:
 
       - name: Go lint
         run: |
-          if [ $(gofmt -l src/* | wc -l) -gt 0 ]; then
-            gofmt -d src/*
+          if [ $(gofmt -l *.go | wc -l) -gt 0 ]; then
+            gofmt -d *.go
             exit 1
           fi
 
