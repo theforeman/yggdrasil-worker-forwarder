@@ -2,8 +2,11 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"fmt"
 	"net"
+	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
@@ -69,6 +72,8 @@ func main() {
 		log.Fatal("Missing FORWARDER_PASSWORD environment variable")
 	}
 
+	httpClient := buildHTTPClient()
+
 	// Dial the dispatcher on its well-known address.
 	conn, err := grpc.NewClient(yggdDispatchSocketAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -102,10 +107,35 @@ func main() {
 
 	// Register as a Worker service with gRPC and start accepting connections.
 	s := grpc.NewServer()
-	pb.RegisterWorkerServer(s, &forwarderServer{Url: postUrl, Username: postUser, Password: postPassword})
+	pb.RegisterWorkerServer(s, &forwarderServer{Url: postUrl, Username: postUser, Password: postPassword, HTTPClient: httpClient})
 	if err := s.Serve(l); err != nil {
 		log.Fatal(err)
 	}
 
 	log.Infof("Successfully registered to the server")
+}
+
+func buildHTTPClient() *http.Client {
+	caFile, ok := os.LookupEnv("FORWARDER_CA_FILE")
+	if !ok {
+		return &http.Client{}
+	}
+
+	caPEM, err := os.ReadFile(caFile)
+	if err != nil {
+		log.Fatalf("cannot read CA file %s: %v", caFile, err)
+	}
+
+	certPool := x509.NewCertPool()
+	if !certPool.AppendCertsFromPEM(caPEM) {
+		log.Fatalf("failed to parse CA certificate from %s", caFile)
+	}
+
+	return &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				RootCAs: certPool,
+			},
+		},
+	}
 }
