@@ -126,12 +126,7 @@ func buildHTTPClient() *http.Client {
 		log.Fatalf("cannot read CA file %s: %v", caFile, err)
 	}
 
-	certPool, err := x509.SystemCertPool()
-	if err != nil {
-		log.Infof("unable to load system cert pool, using custom CA only: %v", err)
-		certPool = x509.NewCertPool()
-	}
-
+	certPool := x509.NewCertPool()
 	if !certPool.AppendCertsFromPEM(caPEM) {
 		log.Fatalf("failed to parse CA certificate from %s", caFile)
 	}
