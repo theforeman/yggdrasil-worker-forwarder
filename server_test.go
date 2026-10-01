@@ -216,6 +216,143 @@ func TestForwarderServer_Send_UsesHTTPClient(t *testing.T) {
 	}
 }
 
+// forward() must use rcvId (the incoming message ID) as response_to, not the
+// rx responseTo argument. This keeps the wire format identical to the gRPC
+// path, which reads from pb.Data.GetMessageId().
+func TestForward_UsesRcvIdAsResponseTo(t *testing.T) {
+	type received struct{ body string }
+	got := make(chan received, 1)
+
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, _ := io.ReadAll(r.Body)
+		got <- received{body: string(body)}
+		w.WriteHeader(http.StatusOK)
+	}))
+	defer ts.Close()
+
+	server := &forwarderServer{
+		Url:        ts.URL,
+		Username:   "u",
+		Password:   "p",
+		HTTPClient: &http.Client{},
+	}
+
+	// rcvId="msg-42", responseTo="other-id" — forward must use rcvId
+	if err := server.forward(nil, "foreman_rh_cloud", "msg-42", "other-id", nil, []byte("data")); err != nil {
+		t.Fatalf("forward returned error: %v", err)
+	}
+
+	select {
+	case r := <-got:
+		if !strings.Contains(r.body, `"response_to":"msg-42"`) {
+			t.Errorf("expected response_to=msg-42, got: %s", r.body)
+		}
+		if strings.Contains(r.body, `"response_to":"other-id"`) {
+			t.Error("forward must not use the rx responseTo argument")
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("forward did not POST")
+	}
+}
+
+func TestMarshalMessage_NilContent(t *testing.T) {
+	got := string(marshalMessage("id-1", "d", nil, nil))
+	if !strings.Contains(got, `"content":null`) {
+		t.Errorf("nil content should marshal as null, got: %s", got)
+	}
+}
+
+func TestMarshalMessage_EmptyContent(t *testing.T) {
+	got := string(marshalMessage("id-1", "d", nil, []byte{}))
+	// encoding/json marshals []byte{} as "" (empty base64)
+	if !strings.Contains(got, `"content":""`) {
+		t.Errorf("empty content should marshal as empty string, got: %s", got)
+	}
+}
+
+func TestMarshalMessage_PreservesAllFields(t *testing.T) {
+	metadata := map[string]string{"key": "val"}
+	content := []byte("payload")
+	got := string(marshalMessage("resp-1", "foreman_rh_cloud", metadata, content))
+
+	for _, want := range []string{
+		`"response_to":"resp-1"`,
+		`"directive":"foreman_rh_cloud"`,
+		`"key":"val"`,
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("expected %s in body, got: %s", want, got)
+		}
+	}
+}
+
+func TestLoadConfig_ExportsEnvVars(t *testing.T) {
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "foreman_rh_cloud.toml")
+	configContent := `env = ["TEST_LOAD_CFG_A=alpha", "TEST_LOAD_CFG_B=beta"]` + "\n"
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("CONFIG_FILE", configFile)
+	// Clean up env vars we're about to set
+	t.Cleanup(func() {
+		_ = os.Unsetenv("TEST_LOAD_CFG_A")
+		_ = os.Unsetenv("TEST_LOAD_CFG_B")
+	})
+
+	loadConfig()
+
+	if got := os.Getenv("TEST_LOAD_CFG_A"); got != "alpha" {
+		t.Errorf("TEST_LOAD_CFG_A = %q, want %q", got, "alpha")
+	}
+	if got := os.Getenv("TEST_LOAD_CFG_B"); got != "beta" {
+		t.Errorf("TEST_LOAD_CFG_B = %q, want %q", got, "beta")
+	}
+}
+
+func TestLoadConfig_SetsHandlerFromFilename(t *testing.T) {
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "my_custom_handler.toml")
+	if err := os.WriteFile(configFile, []byte("env = []\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("CONFIG_FILE", configFile)
+
+	loadConfig()
+
+	if got := os.Getenv("FORWARDER_HANDLER"); got != "my_custom_handler" {
+		t.Errorf("FORWARDER_HANDLER = %q, want %q", got, "my_custom_handler")
+	}
+}
+
+func TestLoadConfig_NoFileIsNotAnError(t *testing.T) {
+	t.Setenv("CONFIG_FILE", "")
+	_ = os.Unsetenv("CONFIG_FILE")
+
+	// loadConfig should not panic or fatal when no config file exists
+	loadConfig()
+}
+
+func TestLoadConfig_EnvValueWithEquals(t *testing.T) {
+	dir := t.TempDir()
+	configFile := filepath.Join(dir, "test.toml")
+	configContent := `env = ["TEST_LOAD_CFG_EQ=a=b=c"]` + "\n"
+	if err := os.WriteFile(configFile, []byte(configContent), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Setenv("CONFIG_FILE", configFile)
+	t.Cleanup(func() { _ = os.Unsetenv("TEST_LOAD_CFG_EQ") })
+
+	loadConfig()
+
+	if got := os.Getenv("TEST_LOAD_CFG_EQ"); got != "a=b=c" {
+		t.Errorf("TEST_LOAD_CFG_EQ = %q, want %q (value with = signs)", got, "a=b=c")
+	}
+}
+
 func writeUnrelatedCA(t *testing.T) string {
 	t.Helper()
 	key, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
