@@ -16,3 +16,7 @@
 
 # Binary
 yggdrasil-worker-forwarder
+
+# Build output
+_build/
+vendor/

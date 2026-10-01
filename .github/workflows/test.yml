@@ -13,6 +13,8 @@ jobs:
         go: ['1.25', '1.26']
     steps:
       - uses: actions/checkout@v7
+        with:
+          submodules: true
 
       - name: Setup go
         uses: actions/setup-go@v6
@@ -41,5 +43,7 @@ jobs:
     steps:
       - name: Check out code
         uses: actions/checkout@v2
+        with:
+          submodules: true
       - name: Run golangci-lint
         uses: golangci/golangci-lint-action@v9

@@ -1,0 +1,3 @@
+[submodule "yggdrasil"]
+	path = yggdrasil
+	url = https://github.com/RedHatInsights/yggdrasil.git

@@ -1,0 +1,13 @@
+[Unit]
+Description=Foreman yggdrasil forwarder worker service
+Documentation=https://github.com/theforeman/yggdrasil-worker-forwarder
+
+[Service]
+Type=dbus
+User=root
+Group=@worker_group@
+ExecStart=@libexecdir@/@executable@
+BusName=com.redhat.Yggdrasil1.Worker1.foreman_rh_cloud
+
+[Install]
+WantedBy=multi-user.target
