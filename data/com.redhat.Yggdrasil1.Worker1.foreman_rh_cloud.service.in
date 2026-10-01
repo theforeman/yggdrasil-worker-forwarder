@@ -6,6 +6,10 @@ Documentation=https://github.com/theforeman/yggdrasil-worker-forwarder
 Type=dbus
 User=root
 Group=@worker_group@
+# yggdrasil 0.2.z execs gRPC workers with CONFIG_FILE set; D-Bus workers are
+# standalone systemd services that yggdrasil never execs, so this unit sets it
+# explicitly instead of having the binary guess a path.
+Environment=CONFIG_FILE=/etc/rhc/workers/foreman_rh_cloud.toml
 ExecStart=@libexecdir@/@executable@
 BusName=com.redhat.Yggdrasil1.Worker1.foreman_rh_cloud
 

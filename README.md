@@ -34,6 +34,34 @@ git clone --recurse-submodules https://github.com/theforeman/yggdrasil-worker-fo
 git submodule update --init
 ```
 
+## Configuration
+
+Configuration is read from a TOML file whose `env` array is exported into the
+process environment. The file is named by `CONFIG_FILE`, which the caller is
+expected to set: under gRPC yggdrasil execs the worker with it set, and under
+D-Bus the systemd unit sets it directly to `/etc/rhc/workers/foreman_rh_cloud.toml`
+via `Environment=`. `CONFIG_FILE` being unset is not an error, since the same
+values may be supplied directly through the environment instead.
+
+```toml
+env = [
+  "FORWARDER_USER=cloud_connector_user",
+  "FORWARDER_PASSWORD=...",
+  "FORWARDER_URL=https://satellite.example.com/api/v2/rh_cloud/cloud_request",
+  "FORWARDER_HANDLER=foreman_rh_cloud",
+  "FORWARDER_CA_FILE=/etc/pki/katello/certs/katello-server-ca.crt",
+]
+```
+
+| Variable | Required | Meaning |
+|---|---|---|
+| `FORWARDER_URL` | yes | Foreman cloud_request endpoint to POST to |
+| `FORWARDER_USER` | yes | Foreman user for basic auth |
+| `FORWARDER_PASSWORD` | yes | Password for that user |
+| `FORWARDER_HANDLER` | no | Directive to register as, default `foreman_rh_cloud` |
+| `FORWARDER_CA_FILE` | no | PEM CA bundle used to verify the Foreman TLS certificate instead of the system trust store |
+| `YGG_LOG_LEVEL` | no | Log level, overridden by `-log-level` |
+
 ## Building
 
 ```

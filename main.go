@@ -36,27 +36,7 @@ func main() {
 	flag.Parse()
 
 	setupLogging(logLevel)
-
-	configFile, ok := os.LookupEnv("CONFIG_FILE")
-	if ok {
-		config, err := toml.LoadFile(configFile)
-		if err != nil {
-			log.Fatal(fmt.Errorf("cannot load config: %w", err))
-		}
-
-		for _, value := range config.GetArray("env").([]string) {
-			split := strings.Split(value, "=")
-			if err := os.Setenv(split[0], split[1]); err != nil {
-				log.Fatal(fmt.Errorf("cannot set env var %s: %w", split[0], err))
-			}
-		}
-
-		if err := os.Setenv("FORWARDER_HANDLER", strings.TrimSuffix(filepath.Base(configFile), filepath.Ext(configFile))); err != nil {
-			log.Fatal(fmt.Errorf("cannot set FORWARDER_HANDLER: %w", err))
-		}
-	} else {
-		log.Debug("CONFIG_FILE not set")
-	}
+	loadConfig()
 
 	yggdHandler = os.Getenv("FORWARDER_HANDLER")
 	if yggdHandler == "" {
@@ -118,6 +98,45 @@ func setupLogging(logLevel string) {
 		return
 	}
 	log.SetLevel(level)
+}
+
+// loadConfig reads the worker's TOML configuration named by CONFIG_FILE and
+// exports its "env" array into the process environment. CONFIG_FILE is set by
+// the caller: yggdrasil execs gRPC workers with it, and the D-Bus systemd unit
+// sets it via Environment=. CONFIG_FILE being unset is not an error, as the
+// same values may be supplied directly through the environment.
+func loadConfig() {
+	configFile, ok := os.LookupEnv("CONFIG_FILE")
+	if !ok {
+		log.Debug("CONFIG_FILE not set; using the environment only")
+		return
+	}
+
+	config, err := toml.LoadFile(configFile)
+	if err != nil {
+		log.Fatal(fmt.Errorf("cannot load config: %w", err))
+	}
+
+	envEntries, ok := config.GetArray("env").([]string)
+	if !ok {
+		log.Debugf("no env array in %v", configFile)
+		return
+	}
+
+	for _, value := range envEntries {
+		key, val, found := strings.Cut(value, "=")
+		if !found {
+			log.Warnf("ignoring malformed env entry in %v: %v", configFile, key)
+			continue
+		}
+		if err := os.Setenv(key, val); err != nil {
+			log.Fatal(fmt.Errorf("cannot set env var %s: %w", key, err))
+		}
+	}
+
+	if err := os.Setenv("FORWARDER_HANDLER", strings.TrimSuffix(filepath.Base(configFile), filepath.Ext(configFile))); err != nil {
+		log.Fatal(fmt.Errorf("cannot set FORWARDER_HANDLER: %w", err))
+	}
 }
 
 // serveGRPC registers with the yggdrasil 0.2.z dispatcher and serves the Worker
