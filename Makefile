@@ -38,8 +38,6 @@ _build/data/%: data/%.in
 clean:
 	rm -rf _build
 
-# The trailing echo is not cosmetic: Packit reads the last line of this
-# target's output as the path to the generated archive.
 distribution-tarball: submodule
 	go mod vendor
 	tar --create \
@@ -53,7 +51,6 @@ distribution-tarball: submodule
 		--transform s/^\./$(PKGNAME)-$(VERSION)/ \
 		. && mv /tmp/$(PKGNAME)-$(VERSION).tar.gz .
 	rm -rf ./vendor
-	@echo $(PKGNAME)-$(VERSION).tar.gz
 
 test: submodule
 	go test *.go
