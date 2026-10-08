@@ -22,6 +22,8 @@ jobs:
           tagRegexGroup: 1 # Optional. Default is 1.
       - name: Checkout the repository
         uses: actions/checkout@v7
+        with:
+          submodules: true
       # - uses: actions/setup-go@v3
       #   with:
       #     go-version: '^1.17.0' # The Go version to download (if necessary) and use.
