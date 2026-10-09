@@ -3,7 +3,7 @@ LIBEXECDIR := /usr/libexec
 WORKER_GROUP := yggdrasil-worker
 
 ifeq ($(origin VERSION), undefined)
-	VERSION := 0.1.0
+	VERSION := 0.2.0
 endif
 
 .PHONY: build
