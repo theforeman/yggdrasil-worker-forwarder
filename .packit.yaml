@@ -1,0 +1,30 @@
+# See the documentation for more information:
+# https://packit.dev/docs/configuration/
+
+specfile_path: yggdrasil-worker-forwarder.spec
+
+# add or remove files that should be synced
+files_to_sync:
+  - yggdrasil-worker-forwarder.spec
+  - .packit.yaml
+
+upstream_package_name: yggdrasil-worker-forwarder
+downstream_package_name: yggdrasil-worker-forwarder
+
+actions:
+  post-upstream-clone:
+    - "wget https://raw.githubusercontent.com/theforeman/foreman-packaging/rpm/develop/packages/plugins/yggdrasil-worker-forwarder/yggdrasil-worker-forwarder.spec -O yggdrasil-worker-forwarder.spec"
+  get-current-version: "awk '/VERSION :=/ { print $3 }' Makefile"
+  create-archive: make distribution-tarball
+
+jobs:
+  - job: copr_build
+    trigger: pull_request
+    targets:
+      - rhel-9
+      - rhel-10
+
+srpm_build_deps:
+  - golang
+  - make
+  - wget
